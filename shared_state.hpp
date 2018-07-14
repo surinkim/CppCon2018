@@ -22,8 +22,9 @@ class shared_state
 {
     std::string const doc_root_;
 
-    // This simple method of tracking sessions
-    // only works with using an implicit strand.
+    // This simple method of tracking
+    // sessions only works with an implicit
+    // strand (i.e. a single-threaded server)
     std::unordered_set<websocket_session*> sessions_;
 
 public:

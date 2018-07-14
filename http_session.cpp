@@ -213,8 +213,10 @@ http_session::
 fail(error_code ec, char const* what)
 {
     // Don't report on canceled operations
-    if(ec != asio::error::operation_aborted)
-        std::cerr << what << ": " << ec.message() << "\n";
+    if(ec == asio::error::operation_aborted)
+        return;
+
+    std::cerr << what << ": " << ec.message() << "\n";
 }
 
 void

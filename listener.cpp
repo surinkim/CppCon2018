@@ -56,11 +56,11 @@ listener(
     }
 }
 
-// Start accepting incoming connections
 void
 listener::
 run()
 {
+    // Start accepting a connection
     acceptor_.async_accept(
         socket_,
         std::bind(
@@ -75,8 +75,9 @@ listener::
 fail(error_code ec, char const* what)
 {
     // Don't report on canceled operations
-    if(ec != asio::error::operation_aborted)
-        std::cerr << what << ": " << ec.message() << "\n";
+    if(ec == asio::error::operation_aborted)
+        return;
+    std::cerr << what << ": " << ec.message() << "\n";
 }
 
 // Handle a connection
@@ -85,11 +86,12 @@ listener::
 on_accept(error_code ec)
 {
     if(ec)
-        fail(ec, "accept");
-    else
-        std::make_shared<http_session>(
-            std::move(socket_),
-            state_)->run();
+        return fail(ec, "accept");
+
+    // Launch a new session for this connection
+    std::make_shared<http_session>(
+        std::move(socket_),
+        state_)->run();
 
     // Accept another connection
     acceptor_.async_accept(

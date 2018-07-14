@@ -30,10 +30,12 @@ websocket_session::
 fail(error_code ec, char const* what)
 {
     // Don't report on canceled operations
-    if(ec != asio::error::operation_aborted)
-        std::cerr << what << ": " << ec.message() << "\n";
-}
+    if(ec == asio::error::operation_aborted)
+        return;
 
+    std::cerr << what << ": " << ec.message() << "\n";
+}
+.
 void
 websocket_session::
 on_accept(error_code ec)
@@ -59,7 +61,7 @@ void
 websocket_session::
 on_read(error_code ec, std::size_t)
 {
-    // This indicates that the websocket_session was closed
+    // This indicates that the session was closed
     if(ec == websocket::error::closed)
         return;
 
