@@ -20,7 +20,7 @@ class websocket_session;
 // Represents the shared server state
 class shared_state
 {
-    std::string const doc_root_;
+    std::string doc_root_;
 
     // This simple method of tracking
     // sessions only works with an implicit

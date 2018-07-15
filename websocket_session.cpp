@@ -29,8 +29,9 @@ void
 websocket_session::
 fail(error_code ec, char const* what)
 {
-    // Don't report on canceled operations
-    if(ec == net::error::operation_aborted)
+    // Don't report these
+    if( ec == net::error::operation_aborted ||
+        ec == websocket::error::closed)
         return;
 
     std::cerr << what << ": " << ec.message() << "\n";
@@ -61,17 +62,12 @@ void
 websocket_session::
 on_read(error_code ec, std::size_t)
 {
-    // This indicates that the session was closed
-    if(ec == websocket::error::closed)
-        return;
-
     // Handle the error, if any
     if(ec)
         fail(ec, "read");
 
-    // Send the message to all connected clients, including this one
-    net::const_buffer cb = beast::buffers_front(buffer_.data());
-    state_->send(std::string(reinterpret_cast<char const*>(cb.data()), cb.size()));
+    // Send to all connections
+    state_->send(beast::buffers_to_string(buffer_.data()));
 
     // Clear the buffer
     buffer_.consume(buffer_.size());
@@ -79,11 +75,32 @@ on_read(error_code ec, std::size_t)
     // Read another message
     ws_.async_read(
         buffer_,
-        std::bind(
-            &websocket_session::on_read,
-            shared_from_this(),
-            std::placeholders::_1,
-            std::placeholders::_2));
+        [sp = shared_from_this()](
+            error_code ec, std::size_t bytes)
+        {
+            sp->on_read(ec, bytes);
+        });
+}
+
+void
+websocket_session::
+send(std::shared_ptr<std::string const> const& ss)
+{
+    // Always add to queue
+    queue_.push_back(ss);
+
+    // Are we already writing?
+    if(queue_.size() > 1)
+        return;
+
+    // We are not currently writing, so send this immediately
+    ws_.async_write(
+        net::buffer(*queue_.front()),
+        [sp = shared_from_this()](
+            error_code ec, std::size_t bytes)
+        {
+            sp->on_write(ec, bytes);
+        });
 }
 
 void
@@ -101,30 +118,9 @@ on_write(error_code ec, std::size_t)
     if(! queue_.empty())
         ws_.async_write(
             net::buffer(*queue_.front()),
-            std::bind(
-                &websocket_session::on_write,
-                shared_from_this(),
-                std::placeholders::_1,
-                std::placeholders::_2));
-}
-
-void
-websocket_session::
-send(std::shared_ptr<std::string const> const& ss)
-{
-    // Add the string to the queue no matter what
-    queue_.push_back(ss);
-
-    // See if we are currently busy writing a message
-    if(queue_.size() > 1)
-        return;
-
-    // We are not currently writing, so send this immediately
-    ws_.async_write(
-        net::buffer(*queue_.front()),
-        std::bind(
-            &websocket_session::on_write,
-            shared_from_this(),
-            std::placeholders::_1,
-            std::placeholders::_2));
+            [sp = shared_from_this()](
+                error_code ec, std::size_t bytes)
+            {
+                sp->on_write(ec, bytes);
+            });
 }
