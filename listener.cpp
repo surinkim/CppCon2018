@@ -13,7 +13,7 @@
 
 listener::
 listener(
-    asio::io_context& ioc,
+    net::io_context& ioc,
     tcp::endpoint endpoint,
     std::shared_ptr<shared_state> const& state)
     : acceptor_(ioc)
@@ -31,7 +31,7 @@ listener(
     }
 
     // Allow address reuse
-    acceptor_.set_option(asio::socket_base::reuse_address(true));
+    acceptor_.set_option(net::socket_base::reuse_address(true));
     if(ec)
     {
         fail(ec, "set_option");
@@ -48,7 +48,7 @@ listener(
 
     // Start listening for connections
     acceptor_.listen(
-        asio::socket_base::max_listen_connections, ec);
+        net::socket_base::max_listen_connections, ec);
     if(ec)
     {
         fail(ec, "listen");
@@ -63,10 +63,10 @@ run()
     // Start accepting a connection
     acceptor_.async_accept(
         socket_,
-        std::bind(
-            &listener::on_accept,
-            shared_from_this(),
-            std::placeholders::_1));
+        [self = shared_from_this()](error_code ec)
+        {
+            self->on_accept(ec);
+        });
 }
 
 // Report a failure
@@ -75,7 +75,7 @@ listener::
 fail(error_code ec, char const* what)
 {
     // Don't report on canceled operations
-    if(ec == asio::error::operation_aborted)
+    if(ec == net::error::operation_aborted)
         return;
     std::cerr << what << ": " << ec.message() << "\n";
 }
@@ -87,17 +87,17 @@ on_accept(error_code ec)
 {
     if(ec)
         return fail(ec, "accept");
-
-    // Launch a new session for this connection
-    std::make_shared<http_session>(
-        std::move(socket_),
-        state_)->run();
+    else
+        // Launch a new session for this connection
+        std::make_shared<http_session>(
+            std::move(socket_),
+            state_)->run();
 
     // Accept another connection
     acceptor_.async_accept(
         socket_,
-        std::bind(
-            &listener::on_accept,
-            shared_from_this(),
-            std::placeholders::_1));
+        [self = shared_from_this()](error_code ec)
+        {
+            self->on_accept(ec);
+        });
 }

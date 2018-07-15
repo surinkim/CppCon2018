@@ -200,11 +200,11 @@ run()
 {
     // Read a request
     http::async_read(socket_, buffer_, req_,
-        std::bind(
-            &http_session::on_read,
-            shared_from_this(),
-            std::placeholders::_1,
-            std::placeholders::_2));
+        [self = shared_from_this()]
+            (error_code ec, std::size_t bytes)
+        {
+            self->on_read(ec, bytes);
+        });
 }
 
 // Report a failure
@@ -213,7 +213,7 @@ http_session::
 fail(error_code ec, char const* what)
 {
     // Don't report on canceled operations
-    if(ec == asio::error::operation_aborted)
+    if(ec == net::error::operation_aborted)
         return;
 
     std::cerr << what << ": " << ec.message() << "\n";
@@ -254,24 +254,18 @@ on_read(error_code ec, std::size_t)
             auto sp = std::make_shared<response_type>(std::move(response));
 
             // Write the response
-            http::async_write(
-                this->socket_,
-                *sp,
-                std::bind(
-                    &http_session::on_write,
-                    this->shared_from_this(),
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    sp->need_eof(),
-                    std::move(sp)));
+            http::async_write(this->socket_, *sp,
+				[self = shared_from_this(), sp](
+					error_code ec, std::size_t bytes)
+				{
+					self->on_write(ec, bytes, sp->need_eof()); 
+				});
         });
 }
 
 void
 http_session::
-on_write(
-    error_code ec, std::size_t,
-    bool close, std::shared_ptr<void>)
+on_write(error_code ec, std::size_t, bool close)
 {
     // Handle the error, if any
     if(ec)
@@ -291,9 +285,9 @@ on_write(
 
     // Read another request
     http::async_read(socket_, buffer_, req_,
-        std::bind(
-            &http_session::on_read,
-            shared_from_this(),
-            std::placeholders::_1,
-            std::placeholders::_2));
+        [self = shared_from_this()]
+            (error_code ec, std::size_t bytes)
+        {
+            self->on_read(ec, bytes);
+        });
 }

@@ -30,12 +30,12 @@ websocket_session::
 fail(error_code ec, char const* what)
 {
     // Don't report on canceled operations
-    if(ec == asio::error::operation_aborted)
+    if(ec == net::error::operation_aborted)
         return;
 
     std::cerr << what << ": " << ec.message() << "\n";
 }
-.
+
 void
 websocket_session::
 on_accept(error_code ec)
@@ -50,11 +50,11 @@ on_accept(error_code ec)
     // Read a message
     ws_.async_read(
         buffer_,
-        std::bind(
-            &websocket_session::on_read,
-            shared_from_this(),
-            std::placeholders::_1,
-            std::placeholders::_2));
+        [sp = shared_from_this()](
+            error_code ec, std::size_t bytes)
+        {
+            sp->on_read(ec, bytes);
+        });
 }
 
 void
@@ -70,7 +70,7 @@ on_read(error_code ec, std::size_t)
         fail(ec, "read");
 
     // Send the message to all connected clients, including this one
-    asio::const_buffer cb = beast::buffers_front(buffer_.data());
+    net::const_buffer cb = beast::buffers_front(buffer_.data());
     state_->send(std::string(reinterpret_cast<char const*>(cb.data()), cb.size()));
 
     // Clear the buffer
@@ -100,7 +100,7 @@ on_write(error_code ec, std::size_t)
     // Send the next message if any
     if(! queue_.empty())
         ws_.async_write(
-            boost::asio::buffer(*queue_.front()),
+            net::buffer(*queue_.front()),
             std::bind(
                 &websocket_session::on_write,
                 shared_from_this(),
@@ -121,7 +121,7 @@ send(std::shared_ptr<std::string const> const& ss)
 
     // We are not currently writing, so send this immediately
     ws_.async_write(
-        boost::asio::buffer(*queue_.front()),
+        net::buffer(*queue_.front()),
         std::bind(
             &websocket_session::on_write,
             shared_from_this(),

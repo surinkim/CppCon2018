@@ -10,7 +10,7 @@
 #ifndef CPPCON2018_HTTP_SESSION_HPP
 #define CPPCON2018_HTTP_SESSION_HPP
 
-#include "asio.hpp"
+#include "net.hpp"
 #include "beast.hpp"
 #include "shared_state.hpp"
 #include <cstdlib>
@@ -28,8 +28,7 @@ class http_session : public std::enable_shared_from_this<http_session>
     void fail(error_code ec, char const* what);
     void on_read(error_code ec, std::size_t);
     void on_write(
-        error_code ec, std::size_t, bool close,
-        std::shared_ptr<void>);
+        error_code ec, std::size_t, bool close);
 
 public:
     http_session(

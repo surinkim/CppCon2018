@@ -32,12 +32,12 @@ main(int argc, char* argv[])
             "    websocket-chat-server 0.0.0.0 8080 .\n";
         return EXIT_FAILURE;
     }
-    auto const address = asio::ip::make_address(argv[1]);
-    auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
-    auto const doc_root = argv[3];
+    auto address = net::ip::make_address(argv[1]);
+    auto port = static_cast<unsigned short>(std::atoi(argv[2]));
+    auto doc_root = argv[3];
 
     // The io_context is required for all I/O
-    asio::io_context ioc;
+    net::io_context ioc;
 
     // Create and launch a listening port
     std::make_shared<listener>(
@@ -46,13 +46,13 @@ main(int argc, char* argv[])
         std::make_shared<shared_state>(doc_root))->run();
 
     // Capture SIGINT and SIGTERM to perform a clean shutdown
-    asio::signal_set signals(ioc, SIGINT, SIGTERM);
+    net::signal_set signals(ioc, SIGINT, SIGTERM);
     signals.async_wait(
-        [&](boost::system::error_code const&, int)
+        [&ioc](boost::system::error_code const&, int)
         {
-            // Stop the `io_context`. This will cause `run()`
+            // Stop the io_context. This will cause run()
             // to return immediately, eventually destroying the
-            // `io_context` and all of the handlers in it.
+            // io_context and any remaining handlers in it.
             ioc.stop();
         });
 

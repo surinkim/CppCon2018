@@ -10,7 +10,7 @@
 #ifndef CPPCON2018_WEBSOCKET_SESSION_HPP
 #define CPPCON2018_WEBSOCKET_SESSION_HPP
 
-#include "asio.hpp"
+#include "net.hpp"
 #include "beast.hpp"
 #include "shared_state.hpp"
 
@@ -26,8 +26,8 @@ class shared_state;
 */
 class websocket_session : public std::enable_shared_from_this<websocket_session>
 {
+    beast::flat_buffer buffer_;
     websocket::stream<tcp::socket> ws_;
-    boost::beast::flat_buffer buffer_;
     std::shared_ptr<shared_state> state_;
     std::vector<std::shared_ptr<std::string const>> queue_;
 

@@ -10,7 +10,7 @@
 #ifndef CPPCON2018_LISTENER_HPP
 #define CPPCON2018_LISTENER_HPP
 
-#include "asio.hpp"
+#include "net.hpp"
 #include <memory>
 #include <string>
 
@@ -29,7 +29,7 @@ class listener : public std::enable_shared_from_this<listener>
 
 public:
     listener(
-        asio::io_context& ioc,
+        net::io_context& ioc,
         tcp::endpoint endpoint,
         std::shared_ptr<shared_state> const& state);
 
